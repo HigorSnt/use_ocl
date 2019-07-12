@@ -56,5 +56,8 @@ Considerando o diagrama acima, implemente-o usando USE, como instruído nos exem
 
 11. Especifique que após ouvir uma música, a quantidade de suas visualizações aumentou em 1.
 
-**LINK PARA O REPOSITÓRIO ORIGINAL:**  
-[JÚLIO GUEDES](https://github.com/juliobguedes/use_instrucoes/blob/master/2019_1/exercicio.md)
+Autor: [Júlio Guedes](https://github.com/juliobguedes/use_instrucoes/blob/master/2019_1/exercicio.md)
+
+<p align="center">
+    <img src="http://alumni.computacao.ufcg.edu.br/static/logica/images/logo.png"/>
+</p>
