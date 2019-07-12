@@ -1,0 +1,242 @@
+model Diagrama2
+
+-------------------------- Definindo uma enumeração
+
+enum TipoAlbum {ESTUDIO, AO_VIVO, SOLO, COVER}
+
+-------------------------- Definindo as classes
+
+class Tempo
+attributes
+	dias: Integer
+	horas: Integer
+	minutos: Integer
+	segundos: Integer
+end
+
+class Artista
+attributes
+	nome: String
+	biografia: String
+operations
+	totalVisualizacoes(): Integer
+end
+
+class Album
+attributes
+	nome: String
+	tipo: TipoAlbum
+operations
+	totalVisualizacoes(): Integer
+	duracaoDiscos(): Integer
+end
+
+class Musica
+attributes
+	titulo: String
+	duracao: Tempo
+	visualizacoes: Integer
+operations
+	ouvir()
+end
+
+class Disco
+attributes
+	numDisco: Integer
+operations
+	duracaoTotal(): Integer = self.musica.duracao->iterate(t: Tempo; tempoTotal: Integer = 0 |
+			tempoTotal + (t.dias * 86400) + (t.horas * 3600) + 
+			(t.minutos * 60) + t.segundos)
+end
+
+class EP
+attributes
+	nome: String
+operations
+	totalVisualizacoes(): Integer
+	duracaoTotal(): Integer
+end
+
+class Single
+attributes
+	nome: String
+operations
+	duracaoTotal(): Integer
+	totalVisualizacoes(): Integer
+end
+
+class Playlist
+attributes
+	descricao: String
+	ehPublica: Boolean
+	ehColaborativa: Boolean
+operations
+	calculaTempo(): Integer
+	numeroDeMusicas(): Integer
+end
+
+class Usuario
+attributes
+	nome: String
+	email: String
+end
+
+association compoe between
+	Musica[*]
+	Playlist[*]
+end
+
+-------------------------- Definindo associações entre as classes
+
+association escuta between
+	Playlist[*]
+	Usuario[1]
+end
+
+association divulga between
+	Artista[*]
+	Single[*]
+end
+
+association possui between
+	Single[0..1]
+	Musica[1..3]
+end
+
+association lanca between
+	Artista[*]
+	Album[*]
+end
+
+association dispoe between
+	Album[1]
+	Disco[*]
+end
+
+association contem between
+	Disco[0..1]
+	Musica[*]
+end
+
+association grava between
+	Artista[*]
+	EP[*]
+end
+
+association tem between
+	EP[0..1]
+	Musica[3..6]
+end
+
+-------------------------- Fim das associações
+
+
+
+
+
+-------------------------- Definindo as restrições (constraints)
+constraints
+-------------------------- Definindo as restrições (constraints)
+
+
+context Artista
+	-- Os nomes dos álbuns de um artista devem ser únicos
+	inv:
+		self.album->forAll(a1: Album, a2: Album | a1.nome <> a2.nome)
+
+context Album
+	-- Os discos de um album devem ter numerações diferentes
+	inv:
+		self.disco->forAll(d1: Disco, d2: Disco | d1.numDisco <> d2.numDisco)
+
+context EP
+	-- Um EP deve conter entre 3 e 6 músicas
+	inv:
+		self.musica->size() >= 3 and self.musica->size() <= 6
+
+context Single
+	-- Um single deve conter entre 1 e 3 músicas
+	inv:
+		self.musica->size() >= 1 and self.musica->size() >= 3
+
+context Album
+	-- Um álbum deve conter 8 ou mais músicas
+	inv:
+		self.disco.musica->asSet()->size() >= 8
+
+context Musica
+	-- A duração de uma música deve ser maior que zero
+	inv:
+		((self.duracao.dias * 86400) + (self.duracao.horas * 3600) + 
+			(self.duracao.minutos * 60) + self.duracao.segundos) > 0
+
+context Playlist::calculaTempo(): Integer
+	-- A duração de uma Playlist é a soma das durações
+	-- das músicas que a compõe.
+	post:
+		result = self.musica.duracao->iterate(t: Tempo; tempoTotal: Integer = 0 |
+			tempoTotal + (t.dias * 86400) + (t.horas * 3600) + 
+			(t.minutos * 60) + t.segundos)
+
+context Disco::duracaoTotal(): Integer
+	-- A duração de um Disco é a soma das durações
+	-- das músicas que o compõe.
+	post:
+		result = self.musica.duracao->iterate(t: Tempo; tempoTotal: Integer = 0 |
+			tempoTotal + (t.dias * 86400) + (t.horas * 3600) + 
+			(t.minutos * 60) + t.segundos)
+
+context Single::duracaoTotal(): Integer
+	-- A duração de um Single é a soma das durações
+	-- das músicas que o compõe.
+	post:
+		result = self.musica.duracao->iterate(t: Tempo; tempoTotal: Integer = 0 |
+			tempoTotal + (t.dias * 86400) + (t.horas * 3600) + 
+			(t.minutos * 60) + t.segundos)
+
+context EP::duracaoTotal(): Integer
+	-- A duração de um EP é a soma das durações
+	-- das músicas que o compõe.
+	post:
+		result = self.musica.duracao->iterate(t: Tempo; tempoTotal: Integer = 0 |
+			tempoTotal + (t.dias * 86400) + (t.horas * 3600) + 
+			(t.minutos * 60) + t.segundos)
+
+context Album::duracaoDiscos(): Integer
+	-- A duração de um Album é a soma das durações
+	-- dos discos que o compõe.
+	post:
+		result = (self.disco.duracaoTotal())->sum()
+
+context Album::totalVisualizacoes(): Integer
+	-- O total de visualizações de um Álbum deve ser
+	-- a soma de visualizações de suas músicas
+	post:
+		result = self.disco.musica.visualizacoes->asSet()->sum()
+
+context Single::totalVisualizacoes(): Integer
+	-- O total de visualizações de um Single deve ser
+	-- a soma de visualizações de suas músicas
+	post:
+		result = self.musica.visualizacoes->sum()
+
+context EP::totalVisualizacoes(): Integer
+	-- O total de visualizações de um EP deve ser
+	-- a soma de visualizações de suas músicas
+	post:
+		result = self.musica.visualizacoes->sum()
+
+context Playlist
+	-- Se uma Playlist for colaborativa ela não pode ser pública,
+	-- e se não for colaborativa ela é pública
+	inv:
+		if ehColaborativa = true then
+			ehPublica = false
+		else
+			ehPublica = true
+		endif
+
+context Musica::ouvir()
+	-- Após ouvir uma música, as visualizações sofrem acréscimo
+	post:
+		self.visualizacoes = self.visualizacoes@pre + 1

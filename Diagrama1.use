@@ -1,0 +1,153 @@
+model Diagrama1
+
+-------------------------- Definindo as classes
+
+class Data
+attributes
+	dia: Integer
+	mes: Integer
+	ano: Integer
+operations
+	equals(d: Data): Boolean
+end
+
+class Horario
+attributes
+	segundo: Integer
+	minuto: Integer
+	hora: Integer
+operations
+	equals(h: Horario): Boolean
+end
+
+class DataHora
+attributes
+	data: Data
+	hora: Horario
+operations
+	equals(dh: DataHora): Boolean
+end
+
+class Usuario
+attributes
+	nome: String
+	telefone: String
+	criadoEm: Data
+	dataNascimento: Data
+operations
+	mensagensEnviadas(): Set(Mensagem)
+end
+
+class Conversa
+operations
+	listarUsuarios(): Set(String)
+end
+
+class Mensagem
+attributes
+	texto: String
+	horaEnvio: DataHora
+	chegouServidor: Boolean
+end
+
+class Grupo < Conversa
+end
+
+-------------------------- Definindo associações entre as classes
+
+association mensagensConversa between
+	Mensagem[*]
+	Conversa[1]
+end
+
+association chatPrivado between
+	Conversa[*]
+	Usuario[2]
+end
+
+association chatGrupo between
+	Usuario[1..256] role usuariosGrupo
+	Grupo[*] role grupoDeConversas
+end
+
+association adminsGrupo between
+	Usuario[1..256] role adminsGrupo
+	Grupo[*]
+end
+
+-------------------------- Fim das associações
+
+
+
+
+-------------------------- Definindo as restrições (constraints)
+constraints
+-------------------------- Definindo as restrições (constraints)
+
+context Horario
+	-- Os segundos devem estar entre 0 e 59 (inclusos)
+	inv: 
+		self.segundo >= 0 and self.segundo < 60
+		
+	-- Os minutos devem estar entre 0 e 59 (inclusos)
+	inv: 
+		self.minuto >= 0 and self.minuto < 60
+	
+	-- As horas devem estar entre 0 e 23 (inclusos)
+	inv: 
+		self.hora >= 0 and self.hora < 24
+
+context Data
+	-- O dia deve ser um valor entre 1 e 31 (inclusos)
+	inv: 
+		self.dia >= 1 and self.dia <= 31
+	
+	-- O mês deve ser um valor entre 1 e 12 (inclusos)
+	inv: 
+		self.mes >= 1 and self.mes <= 12
+	
+	-- O ano deve ser um valor entre 2000 e o ano atual (2019)
+	inv: 
+		self.ano >= 2000 and self.ano <= 2019
+
+context Conversa
+	-- Os usuarios envolvidos na conversa devem ser diferentes (não existe 
+	-- pessoas com o mesmo número de telefone)
+	inv: 
+		self.usuario->forAll(u1: Usuario, u2: Usuario | u1 <> u2 
+			implies u1.telefone <> u2.telefone)
+
+context Grupo
+	-- Os membros de um grupos devem ser unicos (não existe pessoas 
+	-- com o mesmo número de telefone)
+	inv:
+		self.usuariosGrupo->forAll(u1: Usuario, u2: Usuario | 
+			u1 <> u2 implies u1.telefone <> u2.telefone)
+
+context Mensagem
+	-- Uma mensagem não pode ser vazia
+	inv: 
+		self.texto.size() > 0
+
+context Grupo
+	-- Existe no mínimo 1 administrador do grupo e esse administrador 
+	-- é também membro do grupo
+	inv: 
+		self.adminsGrupo->size() > 0 and
+		self.usuariosGrupo->includesAll(self.adminsGrupo)
+		
+	-- Um grupo não pode ter mais administradores do que membros
+	inv: 
+		self.adminsGrupo->size() <= self.usuariosGrupo->size()
+
+context Conversa::listarUsuarios(): Set(String)
+	-- A saída da operação listarUsuarios() deve ser o conjunto
+	-- com os nomes de todos os usuarios
+	post: 
+		result = self.usuario.nome->asSet()
+
+context Usuario::mensagensEnviadas(): Set(Mensagem)
+	-- A saída da operação mensagensEnviadas() deve ser o conjunto
+	-- de todas as mensagens enviadas pelo usuário
+	post:
+		result = self.conversa.mensagem->asSet()
